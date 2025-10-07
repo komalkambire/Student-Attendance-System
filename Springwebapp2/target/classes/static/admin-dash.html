@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Dashboard</title>
+
+    <!-- Bootstrap 5 CDN -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <script src="css/bootstrap.min.js"></script> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+      :root{ --sidebar-width: 260px; }
+      body{ background:#f5f7fb; }
+      .sidebar{
+        width:var(--sidebar-width);
+        height:100vh;
+        position:fixed;
+        left:0; top:0;
+        background:linear-gradient(180deg,#2b5f9e,#1b3a66);
+        color:#fff;
+        padding:1.5rem 1rem;
+      }
+      .sidebar .brand{ font-weight:700; font-size:1.2rem; }
+      .sidebar a{ color:rgba(255,255,255,0.9); text-decoration:none; }
+      .content{ margin-left:var(--sidebar-width); padding:2rem; }
+      .card-transparent{ background:rgba(255,255,255,0.9); }
+      .table thead th{ white-space:nowrap; }
+      .status-badge{ min-width:90px; display:inline-block; }
+      .small-muted{ color:#6c757d; font-size:0.9rem; }
+      .search-row .form-control{ min-width:240px; }
+      @media (max-width: 900px){
+        .sidebar{ position:relative; width:100%; height:auto }
+        .content{ margin-left:0; }
+      }
+    </style>
+  </head>
+  <body>
+
+    <nav class="sidebar d-flex flex-column">
+      <div class="mb-4">
+        <div class="brand d-flex align-items-center gap-2">
+          <i class="fa-solid fa-chalkboard-user fa-lg"></i>
+          <div>
+            <div>Attendance</div>
+            <div style="font-size:0.8rem; opacity:0.85">Admin Panel</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="my-3">
+        <a href="#" class="d-block py-2 px-2 rounded-2"><i class="fa-solid fa-tachometer-alt me-2"></i> Dashboard</a>
+        <a href="#users" class="d-block py-2 px-2 rounded-2"><i class="fa-solid fa-users me-2"></i> Manage Users</a>
+        <a href="#teachers" class="d-block py-2 px-2 rounded-2"><i class="fa-solid fa-chalkboard-teacher me-2"></i> Manage Teachers</a>
+        <a href="#settings" class="d-block py-2 px-2 rounded-2"><i class="fa-solid fa-gear me-2"></i> Settings</a>
+      </div>
+
+      <div class="mt-auto small-muted">
+        Logged in as<br>
+        <strong>admin@example.com</strong>
+      </div>
+    </nav>
+
+    <main class="content">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">Admin Dashboard</h3>
+        <div>
+          <button class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#changePwdModal"><i class="fa-solid fa-key me-1"></i> Change Password</button>
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTeacherModal"><i class="fa-solid fa-user-plus me-1"></i> Add Teacher</button>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <div class="card card-transparent p-3 shadow-sm">
+            <h6>Totals</h6>
+            <div class="d-flex gap-3 mt-2">
+              <div>
+                <div class="h3" id="total-students">--</div>
+                <div class="small-muted">Students</div>
+              </div>
+              <div>
+                <div class="h3" id="total-teachers">--</div>
+                <div class="small-muted">Teachers</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-8">
+          <div class="card p-3 shadow-sm">
+            <h6 class="mb-3">Quick Actions</h6>
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-outline-success" id="exportBtn"><i class="fa-solid fa-file-export me-1"></i> Export CSV</button>
+              <button class="btn btn-outline-secondary" id="refreshBtn"><i class="fa-solid fa-arrows-rotate me-1"></i> Refresh Data</button>
+              <button class="btn btn-outline-danger" id="deactivateSelected"><i class="fa-solid fa-user-slash me-1"></i> Deactivate Selected</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Manage Users -->
+      <section id="users" class="mb-5">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0">Users (Teachers & Students)</h5>
+              <div class="small-muted">View and manage user accounts</div>
+            </div>
+
+            <div class="row align-items-center mb-3 search-row gx-2">
+              <div class="col-auto">
+                <select id="roleFilter" class="form-select">
+                  <option value="all">All Roles</option>
+                  <option value="student">Students</option>
+                  <option value="teacher">Teachers</option>
+                </select>
+              </div>
+              <div class="col-auto">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by name or ID">
+              </div>
+              <div class="col-auto">
+                <label class="small">Date from</label>
+                <input type="date" id="dateFrom" class="form-control">
+              </div>
+              <div class="col-auto">
+                <label class="small">Date to</label>
+                <input type="date" id="dateTo" class="form-control">
+              </div>
+              <div class="col-auto ms-auto">
+                <button class="btn btn-outline-secondary" id="clearFilters">Clear</button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-hover align-middle" id="usersTable">
+                <thead class="table-light">
+                  <tr>
+                    <th><input type="checkbox" id="selectAll"></th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Joined</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div>
+                <small id="rowsInfo" class="small-muted"></small>
+              </div>
+              <nav>
+                <ul class="pagination mb-0" id="pagination"></ul>
+              </nav>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Manage Teachers (anchor) -->
+      <section id="teachers" class="mt-4">
+        <div class="card shadow-sm p-3">
+          <h5>Manage Teachers</h5>
+          <p class="small-muted">Quick list of teachers with assigned classes (optional)</p>
+
+          <div id="teachersList" class="row gy-2"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Modals -->
+    <!-- View Profile Modal -->
+    <div class="modal fade" id="profileModal" tabindex="-1">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">User Profile</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="profileContent"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Teacher Modal -->
+    <div class="modal fade" id="addTeacherModal" tabindex="-1">
+      <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Add Teacher</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <form id="addTeacherForm">
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-control" name="name" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" name="email" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" name="password" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Assign Classes (comma separated)</label>
+                <input type="text" class="form-control" name="classes">
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button class="btn btn-primary" type="submit">Add Teacher</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="changePwdModal" tabindex="-1">
+      <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Change Admin Password</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <form id="changePwdForm">
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Current Password</label>
+                <input type="password" class="form-control" name="current" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">New Password</label>
+                <input type="password" class="form-control" name="new" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Confirm New Password</label>
+                <input type="password" class="form-control" name="confirm" required>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button class="btn btn-primary" type="submit">Update Password</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Bootstrap JS & small script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Sample data
+      const users = [
+        {id:'S1001', name:'Anita Sharma', role:'student', joined:'2024-07-02', status:'active', attendance:[{date:'2025-09-28',status:'Present'},{date:'2025-09-27',status:'Absent'}]},
+        {id:'S1002', name:'Rohit Kumar', role:'student', joined:'2025-01-15', status:'active', attendance:[{date:'2025-09-28',status:'Present'}]},
+        {id:'T2001', name:'Priya Singh', role:'teacher', joined:'2023-11-20', status:'active', classes:['10-A','10-B'], attendance:[]},
+        {id:'T2002', name:'Vikram Patel', role:'teacher', joined:'2025-08-01', status:'inactive', classes:['9-A'], attendance:[]},
+        {id:'S1003', name:'Meera Joshi', role:'student', joined:'2025-02-10', status:'active', attendance:[]},
+        {id:'S1004', name:'Amit Rao', role:'student', joined:'2025-03-22', status:'inactive', attendance:[]}
+      ];
+
+      let filtered = [...users];
+      const pageSize = 4;
+      let currentPage = 1;
+
+      const tbody = document.querySelector('#usersTable tbody');
+      const pagination = document.getElementById('pagination');
+      const rowsInfo = document.getElementById('rowsInfo');
+
+      function renderStats(){
+        document.getElementById('total-students').innerText = users.filter(u=>u.role==='student').length;
+        document.getElementById('total-teachers').innerText = users.filter(u=>u.role==='teacher').length;
+      }
+
+      function renderTable(){
+        const start = (currentPage-1)*pageSize;
+        const pageItems = filtered.slice(start, start+pageSize);
+        tbody.innerHTML = '';
+        pageItems.forEach(u=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><input type="checkbox" class="rowSelect" data-id="${u.id}"></td>
+            <td>${u.id}</td>
+            <td>${u.name}</td>
+            <td>${u.role.charAt(0).toUpperCase()+u.role.slice(1)}</td>
+            <td>${u.joined}</td>
+            <td><span class="badge ${u.status==='active'?'bg-success':'bg-secondary'} status-badge">${u.status}</span></td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary me-1 viewProfile" data-id="${u.id}"><i class="fa-solid fa-eye"></i></button>
+              <button class="btn btn-sm btn-outline-${u.status==='active'?'danger':'success'} toggleStatus" data-id="${u.id}">${u.status==='active'?'Disable':'Enable'}</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        rowsInfo.innerText = `Showing ${Math.min(filtered.length, start+1)} to ${Math.min(filtered.length, start+pageSize)} of ${filtered.length} records`;
+        renderPagination();
+        attachRowEvents();
+      }
+
+      function renderPagination(){
+        const pageCount = Math.ceil(filtered.length / pageSize) || 1;
+        pagination.innerHTML = '';
+        for(let i=1;i<=pageCount;i++){
+          const li = document.createElement('li');
+          li.className = `page-item ${i===currentPage?'active':''}`;
+          li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+          li.addEventListener('click',(e)=>{ e.preventDefault(); currentPage=i; renderTable(); });
+          pagination.appendChild(li);
+        }
+      }
+
+      function attachRowEvents(){
+        document.querySelectorAll('.viewProfile').forEach(btn=>{
+          btn.addEventListener('click',()=>{
+            const id = btn.dataset.id;
+            const u = users.find(x=>x.id===id);
+            openProfile(u);
+          });
+        });
+        document.querySelectorAll('.toggleStatus').forEach(btn=>{
+          btn.addEventListener('click',()=>{
+            const id = btn.dataset.id;
+            const u = users.find(x=>x.id===id);
+            u.status = u.status==='active'?'inactive':'active';
+            filtered = applyFilters();
+            renderStats();
+            renderTable();
+          });
+        });
+      }
+
+      function openProfile(user){
+        const container = document.getElementById('profileContent');
+        container.innerHTML = `
+          <div class="row">
+            <div class="col-md-4 text-center">
+              <div class="p-3 border rounded-3">
+                <i class="fa-solid fa-user-tie fa-3x mb-2"></i>
+                <h5>${user.name}</h5>
+                <div class="small-muted">${user.role.charAt(0).toUpperCase()+user.role.slice(1)}</div>
+                <div class="mt-2"><strong>ID:</strong> ${user.id}</div>
+                <div><strong>Joined:</strong> ${user.joined}</div>
+                <div class="mt-2"><span class="badge ${user.status==='active'?'bg-success':'bg-secondary'}">${user.status}</span></div>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <h6>Personal Details</h6>
+              <table class="table table-borderless small">
+                <tr><th>Name</th><td>${user.name}</td></tr>
+                <tr><th>Role</th><td>${user.role}</td></tr>
+                <tr><th>Joined</th><td>${user.joined}</td></tr>
+                <tr><th>Status</th><td>${user.status}</td></tr>
+                ${user.classes?`<tr><th>Classes</th><td>${(user.classes||[]).join(', ')}</td></tr>`:''}
+              </table>
+
+              <h6 class="mt-3">Attendance History</h6>
+              <div style="max-height:200px; overflow:auto; border:1px solid #eee; padding:0.5rem; border-radius:6px; background:#fafafa;">
+                ${user.attendance && user.attendance.length?`<table class=\"table table-sm mb-0\"><thead><tr><th>Date</th><th>Status</th></tr></thead><tbody>${user.attendance.map(a=>`<tr><td>${a.date}</td><td>${a.status}</td></tr>`).join('')}</tbody></table>`:'<div class="small-muted">No attendance records available.</div>'}
+              </div>
+            </div>
+          </div>
+        `;
+        const profileModal = new bootstrap.Modal(document.getElementById('profileModal'));
+        profileModal.show();
+      }
+
+      // Filters
+      function applyFilters(){
+        const role = document.getElementById('roleFilter').value;
+        const q = document.getElementById('searchInput').value.trim().toLowerCase();
+        const from = document.getElementById('dateFrom').value;
+        const to = document.getElementById('dateTo').value;
+
+        return users.filter(u=>{
+          if(role!=='all' && u.role!==role) return false;
+          if(q){ if(!(u.name.toLowerCase().includes(q) || u.id.toLowerCase().includes(q))) return false; }
+          if(from && u.joined < from) return false;
+          if(to && u.joined > to) return false;
+          return true;
+        });
+      }
+
+      document.getElementById('roleFilter').addEventListener('change',()=>{ filtered = applyFilters(); currentPage=1; renderTable(); });
+      document.getElementById('searchInput').addEventListener('input',()=>{ filtered = applyFilters(); currentPage=1; renderTable(); });
+      document.getElementById('dateFrom').addEventListener('change',()=>{ filtered = applyFilters(); currentPage=1; renderTable(); });
+      document.getElementById('dateTo').addEventListener('change',()=>{ filtered = applyFilters(); currentPage=1; renderTable(); });
+      document.getElementById('clearFilters').addEventListener('click',()=>{ document.getElementById('roleFilter').value='all'; document.getElementById('searchInput').value=''; document.getElementById('dateFrom').value=''; document.getElementById('dateTo').value=''; filtered = applyFilters(); currentPage=1; renderTable(); });
+
+      // Select all
+      document.getElementById('selectAll').addEventListener('change', (e)=>{
+        document.querySelectorAll('.rowSelect').forEach(cb=>cb.checked = e.target.checked);
+      });
+
+      // Deactivate selected
+      document.getElementById('deactivateSelected').addEventListener('click', ()=>{
+        document.querySelectorAll('.rowSelect:checked').forEach(cb=>{
+          const id = cb.dataset.id;
+          const u = users.find(x=>x.id===id);
+          if(u) u.status='inactive';
+        });
+        filtered = applyFilters(); renderStats(); renderTable();
+      });
+
+      // Export CSV (very small client-side exporter)
+      document.getElementById('exportBtn').addEventListener('click', ()=>{
+        const rows = users.map(u=>[u.id,u.name,u.role,u.joined,u.status].join(','));
+        const csv = ['ID,Name,Role,Joined,Status', ...rows].join('\n');
+        const blob = new Blob([csv],{type:'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download='users_export.csv'; a.click(); URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('refreshBtn').addEventListener('click', ()=>{ filtered = applyFilters(); renderStats(); renderTable(); });
+
+      // Add teacher form
+      document.getElementById('addTeacherForm').addEventListener('submit',(e)=>{
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const name = fd.get('name'); const email = fd.get('email'); const pwd = fd.get('password'); const classes = fd.get('classes');
+        const newId = 'T'+(2000 + Math.floor(Math.random()*9000));
+        const newTeacher = { id:newId, name, role:'teacher', joined:new Date().toISOString().slice(0,10), status:'active', classes: classes?classes.split(',').map(s=>s.trim()):[] };
+        users.push(newTeacher);
+        filtered = applyFilters(); renderStats(); renderTable();
+        bootstrap.Modal.getInstance(document.getElementById('addTeacherModal')).hide();
+        e.target.reset();
+      });
+
+      // Change password (mock)
+      document.getElementById('changePwdForm').addEventListener('submit',(e)=>{
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const current = fd.get('current'); const nw = fd.get('new'); const c = fd.get('confirm');
+        if(nw!==c){ alert('New password and confirm password do not match.'); return; }
+        // In real app, send to server. Here we just mock success.
+        alert('Password updated successfully (mock).');
+        bootstrap.Modal.getInstance(document.getElementById('changePwdModal')).hide();
+        e.target.reset();
+      });
+
+      // Render teachers list
+      function renderTeachers(){
+        const container = document.getElementById('teachersList');
+        const teachers = users.filter(u=>u.role==='teacher');
+        container.innerHTML = teachers.map(t=>`
+          <div class=\"col-md-4\"><div class=\"p-2 border rounded-3 bg-white\"> <div class=\"d-flex justify-content-between\"><div><strong>${t.name}</strong><div class=\"small-muted\">${t.id}</div></div><div><span class=\"badge bg-${t.status==='active'?'success':'secondary'}\">${t.status}</span></div></div><div class=\"mt-2 small-muted\">Classes: ${(t.classes||[]).join(', ')||'—'}</div></div></div>
+        `).join('');
+      }
+
+      // initialize
+      function init(){ renderStats(); filtered = applyFilters(); renderTable(); renderTeachers(); }
+      init();
+    </script>
+
+  </body>
+</html>

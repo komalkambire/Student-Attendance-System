@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Student Dashboard</title>
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+    <script src="css/bootstrap.min.js"></script> 
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+  <style>
+    :root { --sidebar-width: 240px; }
+    body { background: #f4f7fb; min-height:100vh; }
+    .sidebar {
+      width: var(--sidebar-width);
+      height: 100vh;
+      position: fixed;
+      left: 0; top: 0;
+      background: linear-gradient(180deg,#1e3a8a,#0b2546);
+      color: #fff;
+      padding: 1.4rem 1rem;
+      display: flex; /* Added for vertical layout */
+      flex-direction: column; /* Added for vertical layout */
+    }
+    .sidebar .brand { font-weight:700; font-size:1.15rem; margin-bottom: 1rem; display:flex; align-items:center; gap:.6rem; }
+    .sidebar a { color: rgba(255,255,255,0.95); text-decoration:none; display:block; padding:.45rem .6rem; border-radius:6px; }
+    .sidebar a:hover { background: rgba(255,255,255,0.06); }
+    .content { margin-left: var(--sidebar-width); padding: 1.6rem; }
+    .card-transparent { background: rgba(255,255,255,0.95); }
+    .small-muted { color:#6c757d; font-size:.9rem; }
+    .avatar { width:68px; height:68px; border-radius:50%; object-fit:cover; }
+    .student-selfie-thumb { width:48px; height:48px; border-radius:6px; object-fit:cover; }
+    .pointer { cursor:pointer; }
+    @media (max-width:900px) {
+      .sidebar { position: relative; width:100%; height:auto; display:flex; gap:1rem; overflow:auto }
+      .content { margin-left:0; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="sidebar">
+    <div class="brand">
+      <i class="fa-solid fa-user-graduate fa-lg"></i>
+      <div>
+        <div>Student Portal</div>
+        <small style="opacity:.9">Attendance & Profile</small>
+      </div>
+    </div>
+
+    <a href="#dashboard" id="navDashboard"><i class="fa-solid fa-house me-2"></i> Dashboard</a>
+    <a href="#mark" id="navMark"><i class="fa-solid fa-clock me-2"></i> Mark Attendance</a>
+    <a href="#history" id="navHistory"><i class="fa-solid fa-list-check me-2"></i> Attendance History</a>
+    <a href="#profile" id="navProfile"><i class="fa-solid fa-id-card me-2"></i> My Profile</a>
+    
+    <div class="mt-auto" style="margin-top:1rem;">
+      <button class="btn btn-outline-light btn-sm w-100" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+    </div>
+  </nav>
+
+  <main class="content">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 id="pageTitle">Welcome</h3>
+      <div>
+        <span id="signedInAs" class="me-3 small-muted"></span>
+        </div>
+    </div>
+
+    <section id="dashboardSection" class="mb-4">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="card card-transparent p-3 shadow-sm">
+            <div class="d-flex align-items-center gap-3">
+              <img id="dashAvatar" class="avatar" src="https://i.pravatar.cc/100?img=12" alt="avatar">
+              <div>
+                <div id="dashName" style="font-weight:600">Guest</div>
+                <div id="dashId" class="small-muted">—</div>
+              </div>
+            </div>
+            <div class="mt-3 small-muted" id="dashContact"></div>
+          </div>
+        </div>
+
+        <div class="col-md-8">
+          <div class="card p-3 shadow-sm">
+            <h6>Quick Actions</h6>
+            <div class="mt-2 d-flex gap-2 flex-wrap">
+              <button class="btn btn-primary" id="gotoMark"><i class="fa-solid fa-fingerprint me-1"></i> Mark Attendance</button>
+              <button class="btn btn-outline-secondary" id="gotoHistory"><i class="fa-solid fa-clock-rotate-left me-1"></i> View History</button>
+              <button class="btn btn-outline-info" id="gotoProfile"><i class="fa-solid fa-user-pen me-1"></i> Edit Profile</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="markSection" class="mb-4" style="display:none;">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5>Mark Attendance (Punch In)</h5>
+          <p class="small-muted">Click the camera button to take a selfie and mark your attendance. The current date & time will be recorded.</p>
+
+          <div class="row gy-3">
+            <div class="col-md-6">
+              <div class="ratio ratio-4x3 bg-black rounded-2 overflow-hidden" id="cameraWrap">
+                <video id="cameraVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+                <img id="cameraCaptured" style="display:none; width:100%; height:100%; object-fit:cover;" alt="captured">
+              </div>
+              <div class="mt-2 d-flex gap-2">
+                <button class="btn btn-outline-primary" id="startCameraBtn"><i class="fa-solid fa-camera"></i> Start Camera</button>
+                <button class="btn btn-primary" id="captureBtn" disabled><i class="fa-solid fa-circle-nodes"></i> Capture & Punch</button>
+                <button class="btn btn-outline-danger" id="stopCameraBtn" style="display:none;"><i class="fa-solid fa-square"></i> Stop</button>
+              </div>
+              <div class="mt-2 small-muted">Note: Allow camera permission when prompted.</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card p-3">
+                <div><strong>Last Punch</strong></div>
+                <div class="mt-2" id="lastPunch">No attendance recorded yet.</div>
+                <div class="mt-3">
+                  <button id="downloadTodayBtn" class="btn btn-outline-success btn-sm" style="display:none;"><i class="fa-solid fa-download me-1"></i> Download Entry</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>  
+    </section>
+
+    <section id="historySection" class="mb-4" style="display:none;">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5>Attendance History</h5>
+
+          <div class="row align-items-center g-2 mb-3">
+            <div class="col-auto">
+              <input type="date" id="historyFrom" class="form-control" />
+            </div>
+            <div class="col-auto">
+              <input type="date" id="historyTo" class="form-control" />
+            </div>
+            <div class="col-auto">
+              <input type="text" id="historySearch" class="form-control" placeholder="Search by date or time" />
+            </div>
+            <div class="col-auto ms-auto">
+              <button class="btn btn-outline-secondary btn-sm" id="clearHistoryFilters">Clear</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>Date</th>
+                  <th>Punch-in Time</th>
+                  <th>Selfie</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="historyTable"></tbody>
+            </table>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <div class="small-muted" id="historyInfo"></div>
+            <nav>
+              <ul class="pagination mb-0" id="historyPagination"></ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="profileSection" style="display:none;">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5>My Profile</h5>
+
+          <div class="row g-3 mt-2">
+            <div class="col-md-4 text-center">
+              <img id="profilePic" class="avatar mb-2" src="https://i.pravatar.cc/100?img=50" alt="avatar">
+              <div>
+                <label class="btn btn-sm btn-outline-primary">
+                  Change Picture <input type="file" id="profilePicInput" accept="image/*" hidden>
+                </label>
+              </div>
+            </div>
+
+            <div class="col-md-8">
+              <form id="profileForm" class="row g-2">
+                <div class="col-md-6">
+                  <label class="form-label">Full Name</label>
+                  <input type="text" id="profileName" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Email</label>
+                  <input type="email" id="profileEmail" class="form-control" required disabled> </div>
+                <div class="col-md-6">
+                  <label class="form-label">Contact</label>
+                  <input type="text" id="profileContact" class="form-control">
+                </div>
+
+                <div class="col-12 mt-2 d-flex gap-2">
+                  <button class="btn btn-primary" type="submit">Save Profile</button>
+                  </div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="modal fade" id="viewSelfieModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Selfie</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body text-center">
+          <img id="viewSelfieImg" src="" alt="selfie" style="width:100%; border-radius:6px; object-fit:cover;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    /*******************************
+     * Simple client-side Student Dashboard (Simplified Fixed User)
+     * - Stores users and attendance in localStorage
+     * - Camera capture for selfie using getUserMedia
+     * - Authentication removed, fixed user always active
+     ********************************/
+
+    // ---------- Utilities ----------
+    const qs = sel => document.querySelector(sel);
+    const qsa = sel => Array.from(document.querySelectorAll(sel));
+
+    // Storage keys
+    const USERS_KEY = 'student_portal_users';
+    const CURRENT_KEY = 'student_portal_current'; // Kept to simulate 'signed in' state
+    const ATT_KEY = 'student_portal_attendance'; // map of email -> [records]
+    
+    // Fixed Demo User's Email
+    const DEMO_EMAIL = 'demo@student.com'; 
+    const DEMO_ID = 'S1234';
+
+    // Dummy Selfie Data (a small, transparent base64 image)
+    const DUMMY_SELFIE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+    // Default demo user and dummy attendance (for easier testing)
+    function ensureDemoUser() {
+      const demoUser = {
+          id: DEMO_ID,
+          name: 'Demo Student',
+          email: DEMO_EMAIL,
+          password: 'password', // kept for data structure consistency, but unused
+          contact: '1234567890',
+          avatar: 'https://i.pravatar.cc/100?img=32',
+          joined: '2023-01-20'
+      };
+
+      const users = [demoUser];
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+      setCurrent(DEMO_EMAIL); // Always set the demo user as current
+
+      // Insert dummy attendance
+      let att = getAttendance();
+      if (!att[DEMO_EMAIL] || att[DEMO_EMAIL].length === 0) {
+        att[DEMO_EMAIL] = [
+            { id: DEMO_ID, name: demoUser.name, email: DEMO_EMAIL, date: '2024-10-01', time: '09:05:00', selfie: 'https://i.pravatar.cc/48?img=1' },
+            { id: DEMO_ID, name: demoUser.name, email: DEMO_EMAIL, date: '2024-10-02', time: '09:15:00', selfie: 'https://i.pravatar.cc/48?img=2' },
+            { id: DEMO_ID, name: demoUser.name, email: DEMO_EMAIL, date: '2024-10-03', time: '08:55:00', selfie: 'https://i.pravatar.cc/48?img=3' },
+            { id: DEMO_ID, name: demoUser.name, email: DEMO_EMAIL, date: '2024-10-04', time: '09:00:00', selfie: 'https://i.pravatar.cc/48?img=4' },
+            { id: DEMO_ID, name: demoUser.name, email: DEMO_EMAIL, date: '2024-10-07', time: '09:01:00', selfie: 'https://i.pravatar.cc/48?img=5' },
+            { id: DEMO_ID, name: demoUser.name, email: DEMO_EMAIL, date: '2024-10-08', time: '09:07:00', selfie: 'https://i.pravatar.cc/48?img=6' },
+        ];
+        saveAttendance(att);
+      }
+    }
+
+    function generateId(){
+      return 'S' + (1000 + Math.floor(Math.random()*9000)); // Unused now, but kept for consistency
+    }
+
+    function getUsers(){ return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); }
+    function saveUsers(u){ localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
+    function getAttendance(){ return JSON.parse(localStorage.getItem(ATT_KEY) || '{}'); }
+    function saveAttendance(a){ localStorage.setItem(ATT_KEY, JSON.stringify(a)); }
+    function setCurrent(email){ localStorage.setItem(CURRENT_KEY, email); }
+    function getCurrent(){ return localStorage.getItem(CURRENT_KEY); }
+    function clearCurrent(){ localStorage.removeItem(CURRENT_KEY); }
+
+    // ---------- UI Elements ----------
+    // Login/Register buttons removed
+    const logoutBtn = qs('#logoutBtn'); // Now in the sidebar
+    const signedInAs = qs('#signedInAs');
+    const dashName = qs('#dashName');
+    const dashId = qs('#dashId');
+    const dashContact = qs('#dashContact');
+    const dashAvatar = qs('#dashAvatar');
+    const profilePic = qs('#profilePic');
+    const profileName = qs('#profileName');
+    const profileEmail = qs('#profileEmail');
+    const profileContact = qs('#profileContact');
+
+    // Sections
+    const dashboardSection = qs('#dashboardSection');
+    const markSection = qs('#markSection');
+    const historySection = qs('#historySection');
+    const profileSection = qs('#profileSection');
+
+    // Camera elements
+    const startCameraBtn = qs('#startCameraBtn');
+    const stopCameraBtn = qs('#stopCameraBtn');
+    const captureBtn = qs('#captureBtn');
+    const cameraVideo = qs('#cameraVideo');
+    const cameraCaptured = qs('#cameraCaptured');
+    const lastPunchDiv = qs('#lastPunch');
+    const downloadTodayBtn = qs('#downloadTodayBtn');
+
+    // History
+    const historyTable = qs('#historyTable');
+    const historyPagination = qs('#historyPagination');
+    const historyInfo = qs('#historyInfo');
+
+    // Forms
+    // Login/Register/Forgot/ChangePwd forms removed
+    const profileForm = qs('#profileForm');
+    const profilePicInput = qs('#profilePicInput');
+
+    // Filters
+    const historyFrom = qs('#historyFrom');
+    const historyTo = qs('#historyTo');
+    const historySearch = qs('#historySearch');
+    const clearHistoryFilters = qs('#clearHistoryFilters');
+
+    // Pagination settings
+    const PAGE_SIZE = 6;
+    let currentHistoryPage = 1;
+
+    // Camera stream
+    let streamRef = null;
+
+    // ---------- Initialization ----------
+    ensureDemoUser(); // Sets up the fixed user and logs them in
+    refreshAuthUI();
+    setupEventListeners();
+
+    // ---------- Event Listeners ----------
+    function setupEventListeners(){
+      // Login/Register modal open listeners removed
+
+      qs('#gotoMark').addEventListener('click', ()=> showSection('mark'));
+      qs('#gotoHistory').addEventListener('click', ()=> showSection('history'));
+      qs('#gotoProfile').addEventListener('click', ()=> showSection('profile'));
+
+      logoutBtn.addEventListener('click', ()=> {
+        clearCurrent(); 
+        refreshAuthUI();
+        alert('Logged out. Reload page to log in fixed demo user.');
+      });
+      
+      // Login/Register/Forgot form listeners removed
+
+      // Start/Stop camera and capture
+      startCameraBtn.addEventListener('click', startCamera);
+      stopCameraBtn.addEventListener('click', stopCamera);
+      captureBtn.addEventListener('click', captureAndPunch);
+
+      // Profile picture upload
+      profilePicInput.addEventListener('change', e=>{
+        const f = e.target.files[0];
+        if(!f) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          profilePic.src = reader.result; dashAvatar.src = reader.result;
+          updateCurrentUser({ avatar: reader.result });
+        };
+        reader.readAsDataURL(f);
+      });
+
+      // Save profile
+      profileForm.addEventListener('submit', e=>{
+        e.preventDefault();
+        const nm = profileName.value.trim();
+        // const em = profileEmail.value.trim().toLowerCase(); // Email update logic removed
+        const ct = profileContact.value.trim();
+        const users = getUsers();
+        const cur = getCurrent();
+        if(!cur){ alert('Not signed in (error).'); return; }
+        const idx = users.findIndex(u=>u.email===cur);
+        if(idx===-1){ alert('User not found (error).'); return; }
+        
+        users[idx].name = nm;
+        users[idx].contact = ct;
+        saveUsers(users);
+        // setCurrent(em); // update current key if email changed logic removed
+        refreshAuthUI();
+        alert('Profile updated (demo).');
+      });
+
+      // Change password form listener removed
+      
+      // Forgot link listener removed
+
+      // Download single today's entry
+      downloadTodayBtn.addEventListener('click', ()=>{
+        const cur = getCurrent(); if(!cur) return;
+        const att = getAttendance();
+        const arr = att[cur] || [];
+        if(arr.length === 0) return;
+        const last = arr[arr.length -1];
+        const csv = `ID,Name,Email,Date,Time\n${last.id},${encodeURIComponent(last.name)},${last.email},${last.date},${last.time}`;
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'attendance_entry.csv'; a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      // History filters
+      historyFrom.addEventListener('change', ()=>{ currentHistoryPage=1; renderHistory(); });
+      historyTo.addEventListener('change', ()=>{ currentHistoryPage=1; renderHistory(); });
+      historySearch.addEventListener('input', ()=>{ currentHistoryPage=1; renderHistory(); });
+      clearHistoryFilters.addEventListener('click', ()=>{ historyFrom.value=''; historyTo.value=''; historySearch.value=''; currentHistoryPage=1; renderHistory(); });
+
+      // Profile navigation
+      qs('#navDashboard').addEventListener('click', ()=> showSection('dashboard'));
+      qs('#navMark').addEventListener('click', ()=> showSection('mark'));
+      qs('#navHistory').addEventListener('click', ()=> showSection('history'));
+      qs('#navProfile').addEventListener('click', ()=> showSection('profile'));
+      
+      // Change password open button removed
+    }
+
+    // ---------- Auth UI ----------
+    function refreshAuthUI(){
+      const cur = getCurrent();
+      if(!cur){
+        // not signed in
+        signedInAs.innerText = 'Not Signed In (Logged Out)';
+        logoutBtn.style.display = 'none'; // Hide logout if not signed in
+        qs('.sidebar small').innerText = 'Not Signed In';
+        dashName.innerText = 'Guest';
+        dashId.innerText = '—';
+        dashContact.innerText = 'Demo user logged out. Reload page to log in fixed user.';
+        dashAvatar.src = 'https://i.pravatar.cc/100?img=12';
+        profilePic.src = 'https://i.pravatar.cc/100?img=50';
+        profileName.value = '';
+        profileEmail.value = '';
+        profileContact.value = '';
+        showSection('dashboard');
+        renderHistory();
+        return;
+      }
+      const users = getUsers();
+      const user = users.find(u => u.email === cur);
+      if(!user){
+        clearCurrent();
+        refreshAuthUI();
+        return;
+      }
+      // update UI
+      signedInAs.innerText = `Signed in: ${user.name}`;
+      logoutBtn.style.display = 'block'; // Show logout in sidebar
+      qs('.sidebar small').innerText = user.email;
+      dashName.innerText = user.name;
+      dashId.innerText = user.id;
+      dashContact.innerText = `Contact: ${user.contact || '—'} • Joined: ${user.joined || '—'}`;
+      dashAvatar.src = user.avatar || 'https://i.pravatar.cc/100?img=12';
+      profilePic.src = user.avatar || 'https://i.pravatar.cc/100?img=50';
+      profileName.value = user.name;
+      profileEmail.value = user.email;
+      profileContact.value = user.contact || '';
+      renderLastPunch();
+      renderHistory();
+    }
+
+    // ---------- Show Section ----------
+    function showSection(key){
+      dashboardSection.style.display = (key==='dashboard') ? '' : 'none';
+      markSection.style.display = (key==='mark') ? '' : 'none';
+      historySection.style.display = (key==='history') ? '' : 'none';
+      profileSection.style.display = (key==='profile') ? '' : 'none';
+      // update title
+      const map = { dashboard: 'Dashboard', mark: 'Mark Attendance', history: 'Attendance History', profile: 'My Profile' };
+      qs('#pageTitle').innerText = map[key] || 'Student Portal';
+    }
+
+    // ---------- Camera functions ----------
+    async function startCamera(){
+      const cur = getCurrent();
+      if(!cur){ alert('Demo user is logged out. Reload page.'); return; }
+      try {
+        streamRef = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio:false });
+        cameraVideo.srcObject = streamRef;
+        cameraVideo.style.display = '';
+        cameraCaptured.style.display = 'none';
+        captureBtn.disabled = false;
+        stopCameraBtn.style.display = 'inline-block';
+        startCameraBtn.style.display = 'none';
+      } catch(err){
+        alert('Unable to access camera: ' + err.message);
+      }
+    }
+
+    function stopCamera(){
+      if(streamRef){
+        streamRef.getTracks().forEach(t => t.stop());
+        streamRef = null;
+      }
+      cameraVideo.srcObject = null;
+      cameraVideo.style.display = 'none';
+      cameraCaptured.style.display = 'none';
+      captureBtn.disabled = true;
+      stopCameraBtn.style.display = 'none';
+      startCameraBtn.style.display = 'inline-block';
+    }
+
+    function captureAndPunch(){
+      const cur = getCurrent();
+      if(!cur){ alert('Demo user is logged out. Reload page.'); return; }
+      
+      // capture frame from video
+      const video = cameraVideo;
+      const w = video.videoWidth, h = video.videoHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, w, h);
+      const data = canvas.toDataURL('image/jpeg', 0.85);
+      
+      // show captured
+      cameraCaptured.src = data;
+      cameraCaptured.style.display = '';
+      cameraVideo.style.display = 'none';
+      
+      // save attendance
+      const users = getUsers(); const user = users.find(u => u.email === cur);
+      if(!user){ alert('User not found (error)'); return; }
+      const att = getAttendance();
+      if(!att[cur]) att[cur] = [];
+      const now = new Date();
+      // Ensure date/time format consistency
+      const dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+      const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+      
+      const rec = { id: user.id, name: user.name, email: user.email, date: dateStr, time: timeStr, selfie: data };
+      att[cur].push(rec);
+      saveAttendance(att);
+      renderLastPunch();
+      renderHistory();
+      
+      // enable download button
+      downloadTodayBtn.style.display = '';
+      
+      // stop camera to avoid leaving it on
+      stopCamera();
+      alert('Attendance marked successfully (demo).');
+    }
+
+    // ---------- Attendance Last Punch ----------
+    function renderLastPunch(){
+      const cur = getCurrent();
+      if(!cur){ lastPunchDiv.innerText = 'No attendance recorded yet.'; downloadTodayBtn.style.display='none'; return; }
+      const attendance = getAttendance();
+      const arr = attendance[cur] || [];
+      if(arr.length === 0){ lastPunchDiv.innerText = 'No attendance recorded yet.'; downloadTodayBtn.style.display='none'; return; }
+      const last = arr[arr.length - 1];
+      // Use the student-selfie-thumb for the thumbnail
+      lastPunchDiv.innerHTML = `<div><strong>${last.date} ${last.time}</strong></div><div class="mt-2"><img src="${last.selfie}" class="student-selfie-thumb"></div>`;
+      downloadTodayBtn.style.display = '';
+    }
+
+    // ---------- History rendering with pagination ----------
+    function renderHistory(){
+      const cur = getCurrent();
+      const attendance = getAttendance();
+      const arr = (cur && attendance[cur]) ? [...attendance[cur]].reverse() : []; // latest first
+      // filters
+      const from = historyFrom.value;
+      const to = historyTo.value;
+      const q = historySearch.value.trim().toLowerCase();
+      let filtered = arr.filter(r=>{
+        if(from && r.date < from) return false;
+        if(to && r.date > to) return false;
+        if(q && !(r.date.includes(q) || r.time.includes(q))) return false;
+        return true;
+      });
+
+      const total = filtered.length;
+      const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if(currentHistoryPage > pages) currentHistoryPage = pages;
+      const start = (currentHistoryPage -1)* PAGE_SIZE;
+      const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+      // render rows
+      historyTable.innerHTML = pageItems.map((r, idx)=>`
+        <tr>
+          <td>${start + idx + 1}</td>
+          <td>${r.date}</td>
+          <td>${r.time}</td>
+          <td><img src="${r.selfie}" class="student-selfie-thumb pointer" onclick="viewSelfie('${encodeURIComponent(r.selfie)}')"></td>
+          <td><button class="btn btn-sm btn-outline-secondary" onclick="downloadSelfie('${encodeURIComponent(r.selfie)}','${r.date}_${r.time.replace(/:/g,'-')}')"><i class="fa-solid fa-download"></i> Selfie</button></td>
+        </tr>
+      `).join('');
+
+      // pagination
+      historyPagination.innerHTML = '';
+      for(let i=1;i<=pages;i++){
+        const li = document.createElement('li');
+        li.className = 'page-item ' + (i===currentHistoryPage ? 'active' : '');
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.innerText = i;
+        a.addEventListener('click', (e)=>{ e.preventDefault(); currentHistoryPage = i; renderHistory(); });
+        li.appendChild(a);
+        historyPagination.appendChild(li);
+      }
+
+      historyInfo.innerText = total ? `Showing ${start+1} to ${Math.min(start + PAGE_SIZE, total)} of ${total} records` : 'No records to show';
+    }
+
+    // Expose functions used in inline handlers
+    window.viewSelfie = function(dataEnc){
+      const data = decodeURIComponent(dataEnc);
+      qs('#viewSelfieImg').src = data;
+      new bootstrap.Modal(qs('#viewSelfieModal')).show();
+    };
+
+    window.downloadSelfie = function(dataEnc, name){
+      const data = decodeURIComponent(dataEnc);
+      // create link
+      const a = document.createElement('a');
+      a.href = data;
+      a.download = (name || 'selfie') + '.jpg';
+      a.click();
+    };
+
+    // Update current user partial fields (avatar, contact, name)
+    function updateCurrentUser(patch){
+      const cur = getCurrent();
+      if(!cur) return;
+      const users = getUsers();
+      const idx = users.findIndex(u=>u.email === cur);
+      if(idx === -1) return;
+      users[idx] = { ...users[idx], ...patch };
+      saveUsers(users);
+      refreshAuthUI();
+    }
+
+    // Run initial UI update
+    refreshAuthUI();
+
+    // Clean up camera when leaving page
+    window.addEventListener('beforeunload', ()=>{ if(streamRef) streamRef.getTracks().forEach(t => t.stop()); });
+  </script>
+     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
